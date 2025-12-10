@@ -120,7 +120,7 @@ function hardReset() {
 /* ---------- Game logic ---------- */
 function costFor(baseCost, level) {
   // Typical incremental scaling: base * 1.15^level
-  return Math.ceil(baseCost * Math.pow(1.15, level));
+  return Math.ceil(baseCost * Math.pow(1.35, level));
 }
 
 function addScore(n, opts={floating:true}) {
