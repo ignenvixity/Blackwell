@@ -1,10 +1,6 @@
 /* Blackwell Clicker - script.js
-   Full integrated script:
-   - bulk buy (1/5/10/100)
-   - active multiplier highlight
-   - prestige (1T per point, resets totalScore)
-   - secret dev-cheat panel
-   - autos, store, save/load, click cooldown, floating text
+   Full integrated script: bulk buy, prestige (1T / point, resets totalScore),
+   secret dev-cheat panel, autos, store, save/load, click cooldown, formatting.
 */
 
 "use strict";
@@ -105,7 +101,7 @@ const saveIndicator = $('#save-indicator');
 const floatingLayer = $('#floating-layer');
 const resetBtn = $('#reset-btn');
 
-/* ---------- Audio (simple click sound) ---------- */
+/* ---------- Audio ---------- */
 const audioContext = (typeof AudioContext !== 'undefined') ? new AudioContext() : null;
 function playClickSound() {
   if (!audioContext) return;
@@ -155,133 +151,111 @@ function hardReset() {
 function singleCost(base, level) {
   return Math.ceil(base * Math.pow(1.15, level));
 }
-
 function bulkCost(base, startLevel, amount) {
   let total = 0;
-  for (let i = 0; i < amount; i++) total += singleCost(base, startLevel + i);
+  for (let i=0;i<amount;i++) total += singleCost(base,startLevel+i);
   return total;
 }
-
-function maxAffordable(base, startLevel, money) {
-  let levels = 0;
-  while (true) {
-    const cost = singleCost(base, startLevel + levels);
-    if (money < cost) break;
-    money -= cost;
+function maxAffordable(base,startLevel,money){
+  let levels=0;
+  while(true){
+    const cost=singleCost(base,startLevel+levels);
+    if(money<cost) break;
+    money-=cost;
     levels++;
-    if (levels > 1e7) break;
+    if(levels>1e7) break;
   }
   return levels;
 }
+function costFor(baseCost, level){ return singleCost(baseCost, level); }
 
-function addScore(n, opts={floating:true}) {
-  const realAdd = n * state.prestigeMultiplier;
-  state.score += realAdd;
-  state.totalScore += realAdd;
-  if (opts.floating) spawnFloatingText(`+${fmt(n)}`);
+function addScore(n, opts={floating:true}){
+  const realAdd = n*state.prestigeMultiplier;
+  state.score+=realAdd;
+  state.totalScore+=realAdd;
+  if(opts.floating) spawnFloatingText(`+${fmt(n)}`);
 }
 
-function computeCPS() {
-  let cps = 0;
-  for (const def of AUTO_DEFS) {
-    const lvl = state.autos[def.id] || 0;
-    cps += lvl * def.cps;
+function computeCPS(){
+  let cps=0;
+  for(const def of AUTO_DEFS){
+    const lvl = state.autos[def.id]||0;
+    cps += lvl*def.cps;
   }
-  state.cps = cps;
+  state.cps=cps;
 }
 
-/* ---------- Buy multiplier helpers ---------- */
-const MULTIPLIERS = [1, 5, 10, 100];
-
-function setBuyMultiplier(m) {
-  buyMultiplier = m;
-  document.querySelectorAll("#buy-multiplier button").forEach(b => {
-    const val = Number(b.dataset.multi);
-    b.classList.toggle("active", val === m);
-  });
-  refreshUI(true);
+/* ---------- UI Helpers ---------- */
+function getDisplayCost(baseCost,currentLevel){
+  let amount = buyMultiplier==="max"?maxAffordable(baseCost,currentLevel,Math.floor(state.score)):buyMultiplier;
+  return bulkCost(baseCost,currentLevel,amount);
 }
 
-function setupBuyMultiplier() {
-  document.querySelectorAll("#buy-multiplier button").forEach(btn => {
-    const m = Number(btn.dataset.multi);
-    btn.addEventListener('click', () => setBuyMultiplier(m));
-  });
-  setBuyMultiplier(1); // default
-}
+/* ---------- Build Upgrades ---------- */
+function buildUpgrades(){
+  upgradeList.innerHTML='';
+  for(const def of UPGRADE_DEFS){
+    const lvl=state.upgrades[def.id]||0;
+    const displayCost=getDisplayCost(def.baseCost,lvl);
+    const btn=document.createElement('button');
+    btn.className='upgrade-item';
+    if(state.score<displayCost) btn.classList.add('disabled');
 
-/* ---------- Build lists ---------- */
-function buildUpgrades() {
-  upgradeList.innerHTML = '';
-  for (const def of UPGRADE_DEFS) {
-    const lvl = state.upgrades[def.id] || 0;
-    const chosenLevels = Math.min(buyMultiplier, maxAffordable(def.baseCost, lvl, Math.floor(state.score)));
-    const cost = bulkCost(def.baseCost, lvl, chosenLevels);
-
-    const btn = document.createElement('button');
-    btn.className = 'upgrade-item';
-    if (state.score < cost || chosenLevels <= 0) btn.classList.add('disabled');
-
-    btn.title = MULTIPLIERS.map(m => {
-      const l = Math.min(m, maxAffordable(def.baseCost, lvl, Math.floor(state.score)));
-      return `${m}×: ${l} for ${fmt(bulkCost(def.baseCost, lvl, l))}`;
-    }).join('\n');
-
-    btn.innerHTML = `
+    btn.innerHTML=`
       <div class="upgrade-left">
         <div class="upgrade-name">${def.name} <small style="color:var(--muted)"> (x${lvl})</small></div>
         <div class="upgrade-desc">${def.desc}</div>
       </div>
       <div class="upgrade-right">
-        <div>Cost: ${fmt(cost)}</div>
-        <div style="font-size:0.82rem;color:var(--muted)">+${fmt(def.increment * chosenLevels)} / click</div>
+        <div>Cost: ${fmt(displayCost)}</div>
+        <div style="font-size:0.82rem;color:var(--muted)">+${fmt(def.increment)} / click</div>
       </div>
     `;
-
-    btn.addEventListener('click', () => {
-      if (chosenLevels <= 0 || state.score < cost) return;
-      state.score -= cost;
-      state.upgrades[def.id] = (state.upgrades[def.id] || 0) + chosenLevels;
-      state.clickPower += def.increment * chosenLevels;
+    btn.addEventListener('click',()=>{
+      const current=state.upgrades[def.id]||0;
+      let amount=buyMultiplier==="max"?maxAffordable(def.baseCost,current,Math.floor(state.score)):buyMultiplier;
+      if(amount<=0) return;
+      const totalCost=bulkCost(def.baseCost,current,amount);
+      if(state.score<totalCost) return;
+      state.score-=totalCost;
+      state.upgrades[def.id]=current+amount;
+      state.clickPower+=def.increment*amount;
       saveState();
       refreshUI();
     });
-
     upgradeList.appendChild(btn);
   }
 }
 
-function buildAutos() {
-  autoList.innerHTML = '';
-  for (const def of AUTO_DEFS) {
-    const lvl = state.autos[def.id] || 0;
-    const chosenLevels = Math.min(buyMultiplier, maxAffordable(def.baseCost, lvl, Math.floor(state.score)));
-    const cost = bulkCost(def.baseCost, lvl, chosenLevels);
+/* ---------- Build Autos ---------- */
+function buildAutos(){
+  autoList.innerHTML='';
+  for(const def of AUTO_DEFS){
+    const lvl=state.autos[def.id]||0;
+    const displayCost=getDisplayCost(def.baseCost,lvl);
+    const btn=document.createElement('button');
+    btn.className='upgrade-item';
+    if(state.score<displayCost) btn.classList.add('disabled');
 
-    const btn = document.createElement('button');
-    btn.className = 'upgrade-item';
-    if (state.score < cost || chosenLevels <= 0) btn.classList.add('disabled');
-
-    btn.title = MULTIPLIERS.map(m => {
-      const l = Math.min(m, maxAffordable(def.baseCost, lvl, Math.floor(state.score)));
-      return `${m}×: ${l} for ${fmt(bulkCost(def.baseCost, lvl, l))}`;
-    }).join('\n');
-
-    btn.innerHTML = `
+    btn.innerHTML=`
       <div class="upgrade-left">
         <div class="upgrade-name">${def.name} <small style="color:var(--muted)">(x${lvl})</small></div>
         <div class="upgrade-desc">${def.desc}</div>
       </div>
       <div class="upgrade-right">
-        <div>Cost: ${fmt(cost)}</div>
-        <div style="font-size:0.82rem;color:var(--muted)">${fmt(def.cps * chosenLevels)} / sec</div>
+        <div>Cost: ${fmt(displayCost)}</div>
+        <div style="font-size:0.82rem;color:var(--muted)">${fmt(def.cps)} / sec</div>
       </div>
     `;
 
-    btn.addEventListener('click', () => {
-      if (chosenLevels <= 0 || state.score < cost) return;
-      state.score -= cost;
-      state.autos[def.id] = (state.autos[def.id] || 0) + chosenLevels;
+    btn.addEventListener('click',()=>{
+      const current=state.autos[def.id]||0;
+      let amount=buyMultiplier==="max"?maxAffordable(def.baseCost,current,Math.floor(state.score)):buyMultiplier;
+      if(amount<=0) return;
+      const totalCost=bulkCost(def.baseCost,current,amount);
+      if(state.score<totalCost) return;
+      state.score-=totalCost;
+      state.autos[def.id]=current+amount;
       computeCPS();
       saveState();
       refreshUI();
@@ -291,37 +265,38 @@ function buildAutos() {
   }
 }
 
-/* ---------- Store ---------- */
-function buildStore() {
-  storeList.innerHTML = '';
-  for (const def of STORE_DEFS) {
-    const lvl = state.store[def.id] || 0;
-    const cost = def.baseCost;
-    const btn = document.createElement('button');
-    btn.className = 'upgrade-item';
-    if (state.score < cost) btn.classList.add('disabled');
+/* ---------- Build Store ---------- */
+function buildStore(){
+  storeList.innerHTML='';
+  for(const def of STORE_DEFS){
+    const lvl=state.store[def.id]||0;
+    const displayCost=getDisplayCost(def.baseCost,lvl);
+    const btn=document.createElement('button');
+    btn.className='upgrade-item';
+    if(state.score<displayCost) btn.classList.add('disabled');
 
-    btn.innerHTML = `
+    btn.innerHTML=`
       <div class="upgrade-left">
         <div class="upgrade-name">${def.name} <small style="color:var(--muted)">(x${lvl})</small></div>
         <div class="upgrade-desc">${def.desc}</div>
       </div>
       <div class="upgrade-right">
-        <div>Cost: ${fmt(cost)}</div>
+        <div>Cost: ${fmt(displayCost)}</div>
       </div>
     `;
 
-    btn.addEventListener('click', () => {
-      if (state.score < cost) return;
-      state.score -= cost;
-      state.store[def.id] = (state.store[def.id] || 0) + 1;
-      if (def.effect === 'doubleClick') state.clickPower *= 2;
-      if (def.effect === 'doubleAuto') state._autoMultiplier = (state._autoMultiplier || 1) * 2;
-      if (def.effect === 'doubleBoth') {
-        state.clickPower *= 2;
-        state._autoMultiplier = (state._autoMultiplier || 1) * 2;
-      }
-      computeCPS();
+    btn.addEventListener('click',()=>{
+      let amount=buyMultiplier==="max"?maxAffordable(def.baseCost,lvl,Math.floor(state.score)):buyMultiplier;
+      if(amount<=0) return;
+      const totalCost=bulkCost(def.baseCost,lvl,amount);
+      if(state.score<totalCost) return;
+      state.score-=totalCost;
+      state.store[def.id]=(state.store[def.id]||0)+amount;
+
+      if(def.effect==='doubleClick') state.clickPower*=2**amount;
+      else if(def.effect==='doubleAuto'){ state._autoMultiplier=(state._autoMultiplier||1)*2**amount; computeCPS(); }
+      else if(def.effect==='doubleBoth'){ state.clickPower*=2**amount; state._autoMultiplier=(state._autoMultiplier||1)*2**amount; computeCPS(); }
+
       saveState();
       refreshUI();
     });
@@ -331,165 +306,133 @@ function buildStore() {
 }
 
 /* ---------- Floating text ---------- */
-function spawnFloatingText(text) {
-  const el = document.createElement('div');
-  el.className = 'float-text';
-  el.textContent = text;
-  const width = floatingLayer?.clientWidth || 200;
-  const x = Math.random() * (width - 40) + 20;
-  el.style.left = `${x}px`;
-  el.style.top = `0px`;
-  el.style.color = '#bdeafe';
+function spawnFloatingText(text){
+  const el=document.createElement('div');
+  el.className='float-text';
+  el.textContent=text;
+  const width=floatingLayer?.clientWidth||200;
+  const x=Math.random()*(width-40)+20;
+  el.style.left=`${x}px`;
+  el.style.top=`0px`;
+  el.style.color='#bdeafe';
   floatingLayer?.appendChild(el);
-  setTimeout(()=> el.remove(), 1000);
+  setTimeout(()=>el.remove(),1000);
 }
 
 /* ---------- Prestige ---------- */
-const PRESTIGE_COST = 1e12; // 1T
-
-function calculatePrestigeFromTotal(total) {
-  return Math.floor(total / PRESTIGE_COST);
+const PRESTIGE_COST=1e12;
+function calculatePrestigeFromTotal(total){ return Math.floor(total/PRESTIGE_COST); }
+function resetAllNormalProgress(){ state.score=0; state.totalScore=0; state.clickPower=1; state.cps=0; state.upgrades={}; state.autos={}; state.store={}; delete state._autoMultiplier; }
+function refreshPrestigeInfo(){
+  if(prestigePointsEl) prestigePointsEl.textContent=fmt(state.prestigePoints);
+  const possible=calculatePrestigeFromTotal(state.totalScore);
+  const can=possible>state.prestigePoints;
+  if(prestigeBtn){ prestigeBtn.disabled=!can; prestigeBtn.title=can?'Reset for prestige points':'You need more total score to earn new prestige points'; }
 }
-
-function resetAllNormalProgress() {
-  state.score = 0;
-  state.totalScore = 0;
-  state.clickPower = 1;
-  state.cps = 0;
-  state.upgrades = {};
-  state.autos = {};
-  state.store = {};
-  delete state._autoMultiplier;
-}
-
-function refreshPrestigeInfo() {
-  if (prestigePointsEl) prestigePointsEl.textContent = fmt(state.prestigePoints);
-  const possible = calculatePrestigeFromTotal(state.totalScore);
-  const can = possible > state.prestigePoints;
-  if (prestigeBtn) {
-    prestigeBtn.disabled = !can;
-    prestigeBtn.title = can ? 'Reset for prestige points' : 'You need more total score';
-  }
-}
-
-function doPrestige() {
-  const possible = calculatePrestigeFromTotal(state.totalScore);
-  const gain = possible - state.prestigePoints;
-  if (gain <= 0) { alert("Not enough total score to prestige."); return; }
-  if (!confirm(`Prestige will reset most progress and grant ${gain} prestige point(s). Continue?`)) return;
-
-  state.prestigePoints += gain;
-  state.prestigeMultiplier = 1 + (0.05 * state.prestigePoints);
+function doPrestige(){
+  const possible=calculatePrestigeFromTotal(state.totalScore);
+  const gain=possible-state.prestigePoints;
+  if(gain<=0){ alert("Not enough total score to prestige (1T per prestige point)."); return; }
+  if(!confirm(`Prestige will reset most progress and grant ${gain} prestige point(s). Continue?`)) return;
+  state.prestigePoints+=gain;
+  state.prestigeMultiplier=1+0.05*state.prestigePoints;
   resetAllNormalProgress();
   saveState();
   refreshUI(true);
 }
 
 /* ---------- Click handler ---------- */
-function onClick() {
-  const now = performance.now();
-  if (now - lastClickTime < CLICK_COOLDOWN) return;
-  lastClickTime = now;
-
-  if (audioContext && audioContext.state === 'suspended') audioContext.resume();
+function onClick(){
+  const now=performance.now();
+  if(now-lastClickTime<CLICK_COOLDOWN) return;
+  lastClickTime=now;
+  if(audioContext && audioContext.state==='suspended') audioContext.resume();
   playClickSound();
   addScore(state.clickPower);
   refreshUI();
 }
 
 /* ---------- Game tick ---------- */
-function gameTick() {
-  computeCPS();
-  if (state.cps > 0) addScore(state.cps * (state._autoMultiplier || 1), { floating:false });
-  refreshUI(false);
-}
+function gameTick(){ computeCPS(); const autoMultiplier=state._autoMultiplier||1; if(state.cps>0)addScore(state.cps*autoMultiplier,{floating:false}); refreshUI(false); }
 
 /* ---------- UI refresh ---------- */
-function refreshUI(rebuildAll=false) {
-  if (scoreDisplay) scoreDisplay.textContent = fmt(Math.floor(state.score));
-  if (cpsDisplay) cpsDisplay.textContent = `${fmt(Math.floor(state.cps * (state._autoMultiplier || 1)))} / sec`;
-  if (prestigePointsEl) prestigePointsEl.textContent = fmt(state.prestigePoints);
-
-  buildUpgrades();
-  buildAutos();
-  buildStore();
+function refreshUI(rebuildAll=false){
+  if(scoreDisplay) scoreDisplay.textContent=fmt(Math.floor(state.score));
+  if(cpsDisplay) cpsDisplay.textContent=`${fmt(Math.floor(state.cps*(state._autoMultiplier||1)))} / sec`;
+  if(prestigePointsEl) prestigePointsEl.textContent=fmt(state.prestigePoints);
+  buildUpgrades(); buildAutos(); buildStore();
   refreshPrestigeInfo();
-
-  if (saveIndicator) {
-    saveIndicator.textContent = 'Autosaved';
-    clearTimeout(saveTimeout);
-    saveTimeout = setTimeout(saveState, 500);
-  }
+  if(saveIndicator){ saveIndicator.textContent='Autosaved'; clearTimeout(saveTimeout); saveTimeout=setTimeout(saveState,500); }
 }
 
-/* ---------- UI wiring ---------- */
-function setupUI() {
-  clickButton?.addEventListener('click', onClick);
-  prestigeBtn?.addEventListener('click', doPrestige);
-  resetBtn?.addEventListener('click', hardReset);
-
-  window.addEventListener('keydown', e => {
-    const active = document.activeElement;
-    if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.isContentEditable)) return;
-
-    if (e.code === 'Space') { e.preventDefault(); clickButton?.classList.add('active'); onClick(); }
-    if (e.key === '1') setBuyMultiplier(1);
-    if (e.key === '2') setBuyMultiplier(5);
-    if (e.key === '3') setBuyMultiplier(10);
-    if (e.key === '4') setBuyMultiplier(100);
+/* ---------- Buy Multiplier ---------- */
+function setupBuyMultiplier(){
+  const buttons=document.querySelectorAll("#buy-multiplier button");
+  if(!buttons||buttons.length===0) return;
+  buttons.forEach(btn=>{
+    btn.addEventListener("click",()=>{
+      buttons.forEach(b=>b.classList.remove("active"));
+      btn.classList.add("active");
+      const m=btn.dataset.multi;
+      buyMultiplier=(m==="max")?"max":parseInt(m,10)||1;
+      refreshUI(true);
+    });
   });
-  window.addEventListener('keyup', e => { if (e.code === 'Space') clickButton?.classList.remove('active'); });
-
-  if (tickInterval) clearInterval(tickInterval);
-  tickInterval = setInterval(gameTick, 1000);
-  window.addEventListener('beforeunload', () => saveState());
+  const defaultBtn=document.querySelector('#buy-multiplier button[data-multi="1"]');
+  if(defaultBtn) defaultBtn.classList.add("active");
 }
 
-/* ---------- SECRET CHEAT ---------- */
-const SECRET_CODE = "blackwell";
-let cheatBuffer = "";
-window.addEventListener("keydown", e => {
-  const key = e.key.toLowerCase();
-  const active = document.activeElement;
-  if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.isContentEditable)) return;
-  if (key.length === 1 && key.match(/[a-z0-9]/)) {
-    cheatBuffer += key;
-    if (cheatBuffer.length > SECRET_CODE.length) cheatBuffer = cheatBuffer.slice(-SECRET_CODE.length);
-    if (cheatBuffer === SECRET_CODE) toggleCheatPanel();
+/* ---------- UI Wiring ---------- */
+function setupUI(){
+  clickButton?.addEventListener('click',onClick);
+  prestigeBtn?.addEventListener('click',doPrestige);
+  resetBtn?.addEventListener('click',hardReset);
+  window.addEventListener('keydown',(e)=>{if(e.code==='Space'){e.preventDefault();clickButton?.classList.add('active');onClick();}});
+  window.addEventListener('keyup',(e)=>{if(e.code==='Space') clickButton?.classList.remove('active');});
+  if(tickInterval) clearInterval(tickInterval);
+  tickInterval=setInterval(gameTick,1000);
+  window.addEventListener('beforeunload',()=>saveState());
+}
+
+/* ---------- SECRET CHEAT CODE ---------- */
+const SECRET_CODE="blackwell";
+let cheatBuffer="";
+window.addEventListener("keydown",(e)=>{
+  const key=e.key.toLowerCase();
+  const active=document.activeElement;
+  if(active && (active.tagName==='INPUT'||active.tagName==='TEXTAREA'||active.isContentEditable)) return;
+  if(key.length===1 && key.match(/[a-z0-9]/)){
+    cheatBuffer+=key;
+    if(cheatBuffer.length>SECRET_CODE.length) cheatBuffer=cheatBuffer.slice(-SECRET_CODE.length);
+    if(cheatBuffer===SECRET_CODE) toggleCheatPanel();
   }
 });
+function toggleCheatPanel(){ const panel=document.getElementById("dev-cheat-panel"); if(!panel) return; panel.style.display=(panel.style.display==="flex")?"none":"flex"; }
 
-function toggleCheatPanel() {
-  const panel = document.getElementById("dev-cheat-panel");
-  if (!panel) return;
-  panel.style.display = (panel.style.display === "flex") ? "none" : "flex";
-}
-
-const cheatPanel = document.getElementById("dev-cheat-panel");
-if (cheatPanel) {
-  cheatPanel.addEventListener("click", e => {
-    const cheat = e.target.dataset.cheat;
-    if (!cheat) return;
-    switch (cheat) {
-      case "add1m": state.score += 1_000_000; state.totalScore += 1_000_000; break;
-      case "add1b": state.score += 1_000_000_000; state.totalScore += 1_000_000_000; break;
-      case "addPrestige": state.prestigePoints += 10; state.prestigeMultiplier = 1 + state.prestigePoints * 0.05; break;
-      case "maxClick": state.clickPower = 1e300; break;
-      case "close": cheatPanel.style.display = "none"; return;
+/* ---------- DEV CHEAT ---------- */
+const cheatPanel=document.getElementById("dev-cheat-panel");
+if(cheatPanel){
+  cheatPanel.addEventListener("click",(e)=>{
+    const cheat=e.target.dataset.cheat;
+    if(!cheat) return;
+    switch(cheat){
+      case "add1m": state.score+=1_000_000; state.totalScore+=1_000_000; break;
+      case "add1b": state.score+=1_000_000_000; state.totalScore+=1_000_000_000; break;
+      case "addPrestige": state.prestigePoints+=10; state.prestigeMultiplier=1+state.prestigePoints*0.05; break;
+      case "maxClick": state.clickPower=1e300; break;
+      case "close": cheatPanel.style.display="none"; return;
     }
-    saveState();
-    refreshUI();
+    saveState(); refreshUI();
   });
 }
 
-/* ---------- Initialization ---------- */
-function init() {
-  state = Object.assign(JSON.parse(JSON.stringify(DEFAULT_STATE)), state || {});
-  state.clickPower = state.clickPower || 1;
-  state.prestigePoints = state.prestigePoints || 0;
-  state.prestigeMultiplier = 1 + (0.05 * (state.prestigePoints || 0));
-  state._autoMultiplier = state._autoMultiplier || 1;
-
+/* ---------- Init ---------- */
+function init(){
+  state=Object.assign(JSON.parse(JSON.stringify(DEFAULT_STATE)),state||{});
+  state.clickPower=state.clickPower||1;
+  state.prestigePoints=state.prestigePoints||0;
+  state.prestigeMultiplier=1+0.05*(state.prestigePoints||0);
+  state._autoMultiplier=state._autoMultiplier||1;
   setupBuyMultiplier();
   setupUI();
   computeCPS();
