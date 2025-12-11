@@ -134,6 +134,7 @@ main{
   padding:10px;
   border:1px solid rgba(255,255,255,0.02);
   cursor:pointer;
+  color: white;
   transition: transform 120ms ease, box-shadow 120ms ease;
 }
 .upgrade-item.disabled{opacity:0.45;cursor:not-allowed;transform:none}
