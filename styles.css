@@ -10,6 +10,30 @@ s:root{
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
 }
 
+#buy-multiplier {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+#buy-multiplier button {
+  padding: 6px 10px;
+  background: #111;
+  border: 1px solid #444;
+  border-radius: 6px;
+  color: white;
+  cursor: pointer;
+}
+
+#buy-multiplier button.active {
+  background: #2563eb;
+  border-color: #3b82f6;
+}
+
+#buy-multiplier button:hover {
+  background: #333;
+}
+
 *{box-sizing:border-box}
 html,body{height:100%}
 body{
