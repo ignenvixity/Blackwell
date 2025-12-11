@@ -18,6 +18,7 @@
 
   <main>
     <section id="game-area" class="card">
+      
       <div id="score-row">
         <div id="score-display">0</div>
         <div id="cps-display">0 / sec</div>
@@ -25,13 +26,25 @@
 
       <button id="click-button" aria-label="Click me">Click Me!</button>
 
+      <!-- ✅ Floating text layer -->
       <div id="floating-layer" aria-hidden="true"></div>
+
+      <!-- ✅ BUY MULTIPLIER MOVED INSIDE THE CARD -->
+      <div id="buy-multiplier" class="buy-multi-row">
+        <button data-multi="1">1×</button>
+        <button data-multi="5">5×</button>
+        <button data-multi="10">10×</button>
+        <button data-multi="50">50×</button>
+        <button data-multi="100">100×</button>
+      </div>
 
       <div id="controls">
         <button id="prestige-btn" class="secondary">Prestige</button>
         <div id="prestige-info">Prestige points: <span id="prestige-points">0</span></div>
       </div>
+
     </section>
+
 
     <section id="upgrades" class="card column">
       <h2>Upgrades</h2>
@@ -49,6 +62,7 @@
     <small>&copy; 2025 Blackwell Clicker</small>
   </footer>
 
+  <!-- DEV CHEAT PANEL -->
   <div id="dev-cheat-panel">
     <h3>Developer Cheats</h3>
     <button data-cheat="add1m">+1,000,000 Score</button>
@@ -57,7 +71,6 @@
     <button data-cheat="maxClick">Max Click Power</button>
     <button data-cheat="close">Close</button>
   </div>
-
 
 </body>
 </html>
