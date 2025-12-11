@@ -21,7 +21,7 @@ let lastClickTimes = [];
 const MAX_CLICKS_PER_SECOND = 25;
 
 let lastClickTime = 0;
-const CLICK_COOLDOWN = 75; // 200 ms = 1/5 second
+const CLICK_COOLDOWN = 40; // 200 ms = 1/5 second
 
 function fmt(n) {
   if (n === 0) return "0";
