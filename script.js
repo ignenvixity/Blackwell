@@ -21,14 +21,13 @@ let lastClickTimes = [];
 const MAX_CLICKS_PER_SECOND = 25;
 
 let lastClickTime = 0;
-const CLICK_COOLDOWN = 40; // 200 ms = 1/5 second
+const CLICK_COOLDOWN = 75; // 200 ms = 1/5 second
 
 function fmt(n) {
   if (n === 0) return "0";
   if (!n || !isFinite(n)) return "0";
 
   const abs = Math.abs(n);
-
   if (abs >= 1e69) return (n/1e69).toFixed(2)+"DVg";
   if (abs >= 1e66) return (n/1e66).toFixed(2)+"UVg";
   if (abs >= 1e63) return (n/1e63).toFixed(2)+"Vg";
@@ -76,16 +75,23 @@ const UPGRADE_DEFS = [
   { id: 'u2', name: 'Strong Grip', desc: '+5 per click', baseCost: 100, increment: 5, type:'click' },
   { id: 'u3', name: 'Mechanical Aid', desc: '+20 per click', baseCost: 500, increment: 20, type:'click' },
   { id: 'u4', name: 'Ultimate Click', desc: '+100 per click', baseCost: 10000, increment: 100, type:'click'},
+  { id: 'u5', name: 'Click Mastery', desc: '+500 per click', baseCost: 500000, increment: 500, type:'click' },
+  { id: 'u6', name: 'Transcendent Click', desc: '+2k per click', baseCost: 2000000, increment: 2000, type:'click' },
 ];
 
 const AUTO_DEFS = [
-  { id: 'a1', name: 'Tiny Auto', desc: 'Generates 1 / sec', baseCost: 10, cps: 1 },
-  { id: 'a2', name: 'Robot Hand', desc: 'Generates 8 / sec', baseCost: 500, cps: 10 },
-  { id: 'a3', name: 'Factory', desc: 'Generates 60 / sec', baseCost: 4000, cps: 60 },
+  { id: 'a1', name: 'Tiny Auto', desc: 'Generates 1 / sec', baseCost: 5, cps: 1 },
+  { id: 'a2', name: 'Robot Hand', desc: 'Generates 10 / sec', baseCost: 100, cps: 10 },
+  { id: 'a3', name: 'Factory', desc: 'Generates 100 / sec', baseCost: 10000, cps: 100 },
+  { id: 'a4', name: 'Click Empire', desc: 'Generates 1k / sec', baseCost: 100000, cps: 1000 },
+  { id: 'a5', name: 'AI Overlord', desc: 'Generates 10k / sec', baseCost: 1000000, cps: 10000 },
+  { id: 'a6', name: 'Quantum Computer', desc: 'Generates 100k / sec', baseCost: 10000000, cps: 100000 },
 ];
 
 const STORE_DEFS = [
   { id: 's1', name: 'Click Booster', desc: 'Double click power', baseCost: 100000, effect:'doubleClick' },
+  { id: 's2', name: 'Auto Enhancer', desc: 'Double all auto CPS', baseCost: 500000, effect:'doubleAuto' },
+  { id: 's3', name: 'Mega Pack', desc: 'Double both click power and auto CPS', baseCost: 2000000, effect:'doubleBoth' },
 ];
 
 /* Game vars */
@@ -298,29 +304,30 @@ function refreshPrestigeInfo() {
   prestigeBtn.title = can ? 'Reset for prestige points' : 'You need more total score to earn new prestige points';
 }
 
+function calculatePrestigeGain(score) {
+    return Math.floor(score / PRESTIGE_COST);
+}
+
 function doPrestige() {
-  const newPoints = computePrestigePointsFromScore(state.totalScore) - state.prestigePoints;
-  if (newPoints <= 0) {
-    alert('Not enough total score to prestige.');
-    return;
-  }
-  if (!confirm(`Prestige will reset your score, upgrades, autos and store. You will gain ${newPoints} prestige point(s). Continue?`)) return;
+    const gain = calculatePrestigeGain(state.score);
 
-  state.prestigePoints += newPoints;
-  // apply a permanent multiplier: 5% per prestige point
-  state.prestigeMultiplier = 1 + (0.25 * state.prestigePoints);
+    if (gain < 1) {
+        alert("You need at least 1 trillion score to prestige!");
+        return;
+    }
 
-  // reset progress but keep prestige and multiplier
-  state.score = 0;
-  state.totalScore = 0;
-  state.clickPower = 1;
-  state.cps = 0;
-  state.upgrades = {};
-  state.autos = {};
-  state.store = {};
+    state.prestigePoints += gain;
 
-  saveState();
-  refreshUI(true);
+    // Reset normal progress
+    state.score = 0;
+    state.clickPower = 1;
+    state.cps = 0;
+
+    // Reset upgrades, autoclickers, etc.
+    resetAllNormalProgress();
+
+    saveGame();
+    refreshUI();
 }
 
 /* ---------- Click handler ---------- */
