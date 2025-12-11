@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Blackwell Clicker</title>
+  <link rel="stylesheet" href="styles.css" />
+  <script src="script.js" defer></script>
+</head>
+<body>
+  <header>
+    <h1>Blackwell Clicker   -   <a href="https://github.com/ignenvixity/Blackwell" class="repo-link">Repository</a></h1>
+    <div class="meta">
+      <span id="save-indicator">Saved</span>
+      <button id="reset-btn" title="Reset progress (keeps nothing)">Reset</button>
+    </div>
+  </header>
+
+  <main>
+    <section id="game-area" class="card">
+      <div id="score-row">
+        <div id="score-display">0</div>
+        <div id="cps-display">0 / sec</div>
+      </div>
+
+      <button id="click-button" aria-label="Click me">Click Me!</button>
+
+      <div id="floating-layer" aria-hidden="true"></div>
+
+      <div id="controls">
+        <button id="prestige-btn" class="secondary">Prestige</button>
+        <div id="prestige-info">Prestige points: <span id="prestige-points">0</span></div>
+      </div>
+    </section>
+
+    <section id="upgrades" class="card column">
+      <h2>Upgrades</h2>
+      <div id="upgrade-list"></div>
+
+      <h2>Auto-Clickers</h2>
+      <div id="auto-list"></div>
+
+      <h2>Store</h2>
+      <div id="store-list"></div>
+    </section>
+  </main>
+
+  <footer>
+    <small>&copy; 2025 Blackwell Clicker</small>
+  </footer>
+
+<div id="dev-cheat-btn">⚙</div>
+
+<div id="dev-cheat-panel">
+  <h3>Developer Cheats</h3>
+  <button data-cheat="add1m">+1,000,000 Score</button>
+  <button data-cheat="add1b">+1,000,000,000 Score</button>
+  <button data-cheat="addPrestige">+10 Prestige</button>
+  <button data-cheat="maxClick">Max Click Power</button>
+  <button data-cheat="close">Close</button>
+</div>
+
+
+</body>
+</html>
