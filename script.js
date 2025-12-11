@@ -433,15 +433,42 @@ function init() {
 }
 
 /* ==========================
-      DEV CHEAT SYSTEM
+     SECRET CHEAT CODE
    ========================== */
 
-const cheatBtn = document.getElementById("dev-cheat-btn");
-const cheatPanel = document.getElementById("dev-cheat-panel");
+// The secret code (case-insensitive)
+const SECRET_CODE = "blackwell"; 
+let cheatBuffer = "";
 
-cheatBtn.addEventListener("click", () => {
-  cheatPanel.style.display = (cheatPanel.style.display === "flex") ? "none" : "flex";
+// Listen for typed characters
+window.addEventListener("keydown", (e) => {
+  const key = e.key.toLowerCase();
+
+  // Only allow letters, ignore space/shift/f1/etc.
+  if (key.length === 1 && key.match(/[a-z0-9]/)) {
+    cheatBuffer += key;
+
+    // limit length to avoid infinite growth
+    if (cheatBuffer.length > SECRET_CODE.length)
+      cheatBuffer = cheatBuffer.slice(-SECRET_CODE.length);
+
+    // check match
+    if (cheatBuffer === SECRET_CODE) {
+      toggleCheatPanel();
+    }
+  }
 });
+
+function toggleCheatPanel() {
+  const panel = document.getElementById("dev-cheat-panel");
+  panel.style.display = (panel.style.display === "flex") ? "none" : "flex";
+}
+
+/* ==========================
+      DEV CHEAT ACTIONS
+   ========================== */
+
+const cheatPanel = document.getElementById("dev-cheat-panel");
 
 cheatPanel.addEventListener("click", (e) => {
   const cheat = e.target.dataset.cheat;
@@ -460,11 +487,11 @@ cheatPanel.addEventListener("click", (e) => {
 
     case "addPrestige":
       state.prestigePoints += 10;
-      state.prestigeMultiplier = 1 + (0.05 * state.prestigePoints);
+      state.prestigeMultiplier = 1 + state.prestigePoints * 0.05;
       break;
 
     case "maxClick":
-      state.clickPower = 999999;
+      state.clickPower = 1e300;
       break;
 
     case "close":
